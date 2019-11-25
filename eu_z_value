@@ -1,0 +1,88 @@
+import json
+import pandas as pd
+def reqdata(symbol,date):
+
+#     dir1='D:\\data\\min\\'+symbol+''\\2019-11-22\\2019-11-22.txt'
+    dir1='D:\\data\\min\\'+symbol+'\\'+date+'\\'+date+'.txt'
+#     dir1d='D:\\data\\Day\\IFX.DE\\2019-11-22\\2019-11-22.txt'
+    dir1d='D:\\data\\Day\\'+symbol+'\\'+date+'\\'+date+'.txt'
+
+    file = open(dir1, 'r') 
+    js = file.read()
+    dic = json.loads(js)   
+
+    file.close() 
+    d=dic['chart']['result'][0]['indicators']['quote'][0]['close']
+    df1=pd.Series(d)
+    df1=df1.fillna(axis=0,method='ffill')
+#     print symbol,df1[-2:]
+#     df1.plot()
+    file = open(dir1d, 'r') 
+    js1 = file.read()
+    dic1 = json.loads(js1)   
+    day_l=dic1['chart']['result'][0]['indicators']['quote'][0]['low'][0]
+    day_h=dic1['chart']['result'][0]['indicators']['quote'][0]['high'][0]
+    day_c=dic1['chart']['result'][0]['indicators']['quote'][0]['close'][0]
+    day_c_pre=dic1['chart']['result'][0]['meta']['chartPreviousClose']
+    min_last=df1[-1:].values[0]
+    chgOnclose=day_c/min_last-1
+    chgToday=day_c/day_c_pre-1
+    last_to_l=min_last/day_l-1
+    last_to_h=day_h/min_last-1
+    results={}
+    results['symbol']=symbol
+    results['chgOnclose']=chgOnclose
+    results['chgToday']=chgToday
+    results['last_to_l']=last_to_l
+    results['last_to_h']=last_to_h
+    results['min_hl']=(min_last-day_l)/(day_h-day_l)
+#     print symbol,results['min_hl']
+#     print symbol,results['min_hl'],min_last,day_l,day_h
+
+
+    file.close() 
+  
+    return results
+
+
+
+
+
+# d=dic['chart']['result'][0]['indicators']['quote'][0]['close']
+# df1=pd.Series(d)
+
+def reqmarket(stks,date):
+    rlist=[]
+    for stk  in stks:
+        r=reqdata(stk,date)
+        rlist.append(r)
+    df2=pd.DataFrame(rlist)
+    df2.set_index(['symbol'],inplace=True)
+    df2_z=(df2['chgToday']-df2['chgToday'].mean())/(df2['chgToday'].max()-df2['chgToday'].min())
+
+    # df2_z2=(df2['chgToday']-df2['chgToday'].mean())/df2['chgToday'].std()
+    factorlist=['chgToday','min_hl']
+  
+    dict1={}
+    for factor in factorlist:
+
+        df2_z2=(df2[factor]-df2[factor].mean())/df2[factor].std()
+#         print df2_z2
+#             df2_z22=(df2[factor]-df2[factor].mean())/(df2[factor].max()-df2[factor].min())
+
+        dict1[factor]=df2_z2.values*df2['chgOnclose']
+#         print dict1
+
+    df3=pd.DataFrame(dict1,index=df2.index)
+
+    df4=df3.rank()/len(df3)
+    df5=df3.rank()
+    return df5
+    
+    
+       
+date='2019-11-21'
+
+for s in [gemany,france,swiss,netherlands,milan]:
+    df1=reqmarket(s,date)
+    print df1
